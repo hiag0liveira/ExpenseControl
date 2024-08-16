@@ -1,6 +1,6 @@
 import { BadRequestException, CanActivate, ExecutionContext, Injectable, NotFoundException } from "@nestjs/common";
-import { CategoryService } from "src/category/category.service";
-import { TransactionService } from "src/transaction/transaction.service";
+import { CategoryService } from "../category/category.service";
+import { TransactionService } from "../transaction/transaction.service";
 
 @Injectable()
 export class AuthorGuard implements CanActivate {
