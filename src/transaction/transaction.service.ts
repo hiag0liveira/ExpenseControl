@@ -21,9 +21,12 @@ export class TransactionService {
       user: { id },
     }
 
-    if (!newTransaction) throw new BadRequestException('Something went wrong...');
+    const savedTransaction = await this.transactionRepository.save(newTransaction);
+    if (!savedTransaction) {
+      throw new BadRequestException('Something went wrong...');
+    }
 
-    return await this.transactionRepository.save(newTransaction);
+    return savedTransaction;
   }
 
   async findAll(id: number) {
