@@ -1,194 +1,237 @@
-import { Repository } from 'typeorm';
-import { CategoryService } from '../../src/category/category.service';
-import { Category } from '../../src/category/entities/category.entity';
-import { CreateCategoryDto } from '../../src/category/dto/create-category.dto';
-import { UpdateCategoryDto } from '../../src/category/dto/update-category.dto';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
-import { TransactionService } from '../../src/transaction/transaction.service'; // Importar o serviço
+import { Repository } from 'typeorm'
+import { CategoryService } from '../../src/category/category.service'
+import { Category } from '../../src/category/entities/category.entity'
+import { CreateCategoryDto } from '../../src/category/dto/create-category.dto'
+import { UpdateCategoryDto } from '../../src/category/dto/update-category.dto'
+import { NotFoundException, BadRequestException } from '@nestjs/common'
+import { TransactionService } from '../../src/transaction/transaction.service' // Importar o serviço
 
 describe('CategoryService', () => {
-    let service: CategoryService;
-    let mockCategoryRepository: Repository<Category>;
-    let mockTransactionService: TransactionService; // Adicionar mock do TransactionService
+	let service: CategoryService
+	let mockCategoryRepository: Repository<Category>
+	let mockTransactionService: TransactionService // Adicionar mock do TransactionService
 
-    beforeEach(async () => {
-        // Mock do TransactionService
-        mockTransactionService = {
-            // Mock dos métodos que o serviço pode utilizar
-        } as any as TransactionService;
+	beforeEach(async () => {
+		// Mock do TransactionService
+		mockTransactionService = {
+			// Mock dos métodos que o serviço pode utilizar
+		} as any as TransactionService
 
-        // Mock do CategoryRepository
-        mockCategoryRepository = {
-            findOne: jest.fn(),
-            findBy: jest.fn(),
-            save: jest.fn(),
-            update: jest.fn(),
-            delete: jest.fn(),
-            find: jest.fn(),
-            findAll: jest.fn(),
-        } as any as Repository<Category>;
+		// Mock do CategoryRepository
+		mockCategoryRepository = {
+			findOne: jest.fn(),
+			findBy: jest.fn(),
+			save: jest.fn(),
+			update: jest.fn(),
+			delete: jest.fn(),
+			find: jest.fn(),
+			findAll: jest.fn(),
+		} as any as Repository<Category>
 
-        service = new CategoryService(mockCategoryRepository);
-    });
+		service = new CategoryService(mockCategoryRepository)
+	})
 
-    describe('create', () => {
-        it('should throw an exception when the category already exists', async () => {
-            const createCategoryDto: CreateCategoryDto = {
-                title: 'Food',
-            };
+	describe('create', () => {
+		it('should throw an exception when the category already exists', async () => {
+			//arrange
+			const createCategoryDto: CreateCategoryDto = {
+				title: 'Food',
+			}
 
-            const category: Category = {
-                id: 1,
-                title: 'Food',
-                user: { id: 1 } as any,
-                transactions: [],
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            };
+			const category: Category = {
+				id: 1,
+				title: 'Food',
+				user: { id: 1 } as any,
+				transactions: [],
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			}
 
-            mockCategoryRepository.findBy = jest.fn().mockResolvedValue([category]);
+			mockCategoryRepository.findBy = jest
+				.fn()
+				.mockResolvedValue([category])
+			//act & assert
+			await expect(service.create(createCategoryDto, 1)).rejects.toThrow(
+				BadRequestException,
+			)
+		})
 
-            await expect(service.create(createCategoryDto, 1)).rejects.toThrow(BadRequestException);
-        });
+		it('should create a new category', async () => {
+			//arrange
+			const createCategoryDto: CreateCategoryDto = {
+				title: 'Food',
+			}
 
-        it('should create a new category', async () => {
-            const createCategoryDto: CreateCategoryDto = {
-                title: 'Food',
-            };
+			const newCategory: Category = {
+				id: 1,
+				title: 'Food',
+				user: { id: 1 } as any,
+				transactions: [],
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			}
 
-            const newCategory: Category = {
-                id: 1,
-                title: 'Food',
-                user: { id: 1 } as any,
-                transactions: [],
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            };
+			mockCategoryRepository.findBy = jest.fn().mockResolvedValue([])
+			mockCategoryRepository.save = jest
+				.fn()
+				.mockResolvedValue(newCategory)
 
-            mockCategoryRepository.findBy = jest.fn().mockResolvedValue([]);
-            mockCategoryRepository.save = jest.fn().mockResolvedValue(newCategory);
+			//act
+			const sut = await service.create(createCategoryDto, 1)
 
-            const result = await service.create(createCategoryDto, 1);
+			//assert
+			expect(sut).toEqual(newCategory)
+			expect(mockCategoryRepository.save).toHaveBeenCalledWith({
+				title: 'Food',
+				user: { id: 1 },
+			})
+		})
+	})
 
-            expect(result).toEqual(newCategory);
-            expect(mockCategoryRepository.save).toHaveBeenCalledWith({
-                title: 'Food',
-                user: { id: 1 },
-            });
-        });
-    });
+	describe('findOne', () => {
+		it('should return a category', async () => {
+			//arrange
+			const category: Category = {
+				id: 1,
+				title: 'Food',
+				user: { id: 1 } as any,
+				transactions: [],
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			}
 
-    describe('findOne', () => {
-        it('should return a category', async () => {
-            const category: Category = {
-                id: 1,
-                title: 'Food',
-                user: { id: 1 } as any,
-                transactions: [],
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            };
+			mockCategoryRepository.findOne = jest
+				.fn()
+				.mockResolvedValue(category)
+			//act
+			const sut = await service.findOne(1)
+			//assert
+			expect(sut).toEqual(category)
+		})
 
-            mockCategoryRepository.findOne = jest.fn().mockResolvedValue(category);
+		it('should throw a NotFoundException if category is not found', async () => {
+			//arrange
+			mockCategoryRepository.findOne = jest.fn().mockResolvedValue(null)
+			//act & assert
+			await expect(service.findOne(1)).rejects.toThrow(NotFoundException)
+		})
+	})
 
-            const result = await service.findOne(1);
+	describe('update', () => {
+		it('should throw a NotFoundException if category does not exist', async () => {
+			//arrange
+			const updateCategoryDto: UpdateCategoryDto = {
+				title: 'Updated Food',
+			}
+			mockCategoryRepository.findOne = jest.fn().mockResolvedValue(null)
+			//act & assert
+			await expect(service.update(1, updateCategoryDto)).rejects.toThrow(
+				NotFoundException,
+			)
+		})
 
-            expect(result).toEqual(category);
-        });
+		it('should update the category if it exists', async () => {
+			//arrange
+			const updateCategoryDto: UpdateCategoryDto = {
+				title: 'Updated Food',
+			}
+			const category: Category = {
+				id: 1,
+				title: 'Food',
+				user: { id: 1 } as any,
+				transactions: [],
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			}
 
-        it('should throw a NotFoundException if category is not found', async () => {
-            mockCategoryRepository.findOne = jest.fn().mockResolvedValue(null);
+			mockCategoryRepository.findOne = jest
+				.fn()
+				.mockResolvedValue(category)
+			mockCategoryRepository.update = jest
+				.fn()
+				.mockResolvedValue({ affected: 1 })
 
-            await expect(service.findOne(1)).rejects.toThrow(NotFoundException);
-        });
-    });
+			//act
+			const sut = await service.update(1, updateCategoryDto)
 
-    describe('update', () => {
-        it('should throw a NotFoundException if category does not exist', async () => {
-            const updateCategoryDto: UpdateCategoryDto = { title: 'Updated Food' };
-            mockCategoryRepository.findOne = jest.fn().mockResolvedValue(null);
+			//assert
+			expect(sut).toEqual({ affected: 1 })
+			expect(mockCategoryRepository.update).toHaveBeenCalledWith(
+				1,
+				updateCategoryDto,
+			)
+		})
+	})
 
-            await expect(service.update(1, updateCategoryDto)).rejects.toThrow(NotFoundException);
-        });
+	describe('remove', () => {
+		it('should throw a NotFoundException if category does not exist', async () => {
+			//arrange
+			mockCategoryRepository.findOne = jest.fn().mockResolvedValue(null)
+			//act & assert
+			await expect(service.remove(1)).rejects.toThrow(NotFoundException)
+		})
 
-        it('should update the category if it exists', async () => {
-            const updateCategoryDto: UpdateCategoryDto = { title: 'Updated Food' };
-            const category: Category = {
-                id: 1,
-                title: 'Food',
-                user: { id: 1 } as any,
-                transactions: [],
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            };
+		it('should remove the category if it exists', async () => {
+			//arrange
+			const category: Category = {
+				id: 1,
+				title: 'Food',
+				user: { id: 1 } as any,
+				transactions: [],
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			}
 
-            mockCategoryRepository.findOne = jest.fn().mockResolvedValue(category);
-            mockCategoryRepository.update = jest.fn().mockResolvedValue({ affected: 1 });
+			mockCategoryRepository.findOne = jest
+				.fn()
+				.mockResolvedValue(category)
+			mockCategoryRepository.delete = jest
+				.fn()
+				.mockResolvedValue({ affected: 1 })
 
-            const result = await service.update(1, updateCategoryDto);
+			//act
+			const sut = await service.remove(1)
 
-            expect(result).toEqual({ affected: 1 });
-            expect(mockCategoryRepository.update).toHaveBeenCalledWith(1, updateCategoryDto);
-        });
-    });
+			//assert
+			expect(sut).toEqual({ affected: 1 })
+			expect(mockCategoryRepository.delete).toHaveBeenCalledWith(1)
+		})
+	})
 
-    describe('remove', () => {
-        it('should throw a NotFoundException if category does not exist', async () => {
-            mockCategoryRepository.findOne = jest.fn().mockResolvedValue(null);
+	describe('findAll', () => {
+		it('should return an array of categories', async () => {
+			//arrange
+			const categories: Category[] = [
+				{
+					id: 1,
+					title: 'Food',
+					user: { id: 1 } as any,
+					transactions: [],
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				},
+				{
+					id: 2,
+					title: 'Travel',
+					user: { id: 1 } as any,
+					transactions: [],
+					createdAt: new Date(),
+					updatedAt: new Date(),
+				},
+			]
 
-            await expect(service.remove(1)).rejects.toThrow(NotFoundException);
-        });
+			mockCategoryRepository.find = jest
+				.fn()
+				.mockResolvedValue(categories)
 
-        it('should remove the category if it exists', async () => {
-            const category: Category = {
-                id: 1,
-                title: 'Food',
-                user: { id: 1 } as any,
-                transactions: [],
-                createdAt: new Date(),
-                updatedAt: new Date(),
-            };
-
-            mockCategoryRepository.findOne = jest.fn().mockResolvedValue(category);
-            mockCategoryRepository.delete = jest.fn().mockResolvedValue({ affected: 1 });
-
-            const result = await service.remove(1);
-
-            expect(result).toEqual({ affected: 1 });
-            expect(mockCategoryRepository.delete).toHaveBeenCalledWith(1);
-        });
-    });
-
-    describe('findAll', () => {
-        it('should return an array of categories', async () => {
-            const categories: Category[] = [
-                {
-                    id: 1,
-                    title: 'Food',
-                    user: { id: 1 } as any,
-                    transactions: [],
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                },
-                {
-                    id: 2,
-                    title: 'Travel',
-                    user: { id: 1 } as any,
-                    transactions: [],
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                },
-            ];
-
-            mockCategoryRepository.find = jest.fn().mockResolvedValue(categories);
-
-            const result = await service.findAll(1);
-
-            expect(result).toEqual(categories);
-            expect(mockCategoryRepository.find).toHaveBeenCalledWith({
-                where: { user: { id: 1 } },
-                relations: { transactions: true },
-            });
-        });
-    });
-});
+			//act
+			const sut = await service.findAll(1)
+			//assert
+			expect(sut).toEqual(categories)
+			expect(mockCategoryRepository.find).toHaveBeenCalledWith({
+				where: { user: { id: 1 } },
+				relations: { transactions: true },
+			})
+		})
+	})
+})
